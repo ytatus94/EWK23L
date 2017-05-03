@@ -1,4 +1,4 @@
-#include <ytEWK23LAnalysis/ytEWK23LAnalysis.h>
+#include <ytEWK23LAnalysis/ytEventSelection.h>
 
 #ifdef __CINT__
 
@@ -10,5 +10,5 @@
 #endif
 
 #ifdef __CINT__
-#pragma link C++ class ytEWK23LAnalysis+;
+#pragma link C++ class ytEventSelection+;
 #endif
