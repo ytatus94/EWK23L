@@ -9,6 +9,11 @@ yt_regions::yt_regions()
 yt_regions::~yt_regions()
 {}
 
+
+//
+// Basic cuts
+//
+
 bool yt_regions::pass_baseTwoLepCuts(float lept1Pt, float lept2Pt,
                                      bool isEMU, bool isEE, bool isMUMU,
                                      float Mll,
@@ -139,14 +144,14 @@ bool yt_regions::pass_Z_eta(float Z_eta)
 bool yt_regions::pass_MET(string s, float MET)
 {
     bool pass_MET = false;
-    if (s == "medium") {
-        if (MET > 150. * GeV)
+    if (s == "high") {
+        if (MET > 250. * GeV)
             pass_MET = true;
         else
             pass_MET = false;
     }
-    else if (s == "high") {
-        if (MET > 250. * GeV)
+    else if (s == "medium") {
+        if (MET > 150. * GeV)
             pass_MET = true;
         else
             pass_MET = false;
@@ -285,6 +290,10 @@ bool yt_regions::pass_MET_over_ISR(float MET_over_ISR)
         return false;   
 }
 
+
+//
+//
+//
 
 bool yt_regions::pass_SR2LLoose(float MT2, float Mll)
 {

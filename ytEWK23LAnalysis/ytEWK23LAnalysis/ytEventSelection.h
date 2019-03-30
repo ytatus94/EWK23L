@@ -9,7 +9,9 @@
 // #include <TString.h>
 // #include <TCanvas.h>
 // #include <TLegend.h>
-// #include <TH1.h>
+#include <TH1.h>
+
+#include "ytEWK23LAnalysis/yt_regions.h"
 
 #include <iostream>
 #include <vector>
@@ -26,7 +28,11 @@ class ytEventSelection : public EL::Algorithm
 public:
     // float cutValue;
 
+    yt_regions *m_region; //!
+    bool isOptimization;
+    string analysis_type;
 
+    double weighted_event_counts[6]; //!
 
     // variables that don't get filled at submission time should be
     // protected from being send from the submission node to the worker
@@ -39,6 +45,27 @@ public:
     //
     TTree          *fChain;   //!pointer to the analyzed TTree or TChain
 
+    // Sarah's ntuple
+    // /afs/cern.ch/work/w/williams/public/MultiLepInputMoriond2017/2L2JInputs/CentralBackgrounds.root
+    // Declaration of leaf types
+    Int_t           SASR2LI; //!
+    Int_t           SASR2LH; //!
+    Int_t           SASR2LC2j; //!
+    Int_t           SASR2LC3j; //!
+    Int_t           SACRVVI; //!
+    Int_t           SACRVVC; //!
+    Double_t        eventweight; //!
+
+    // List of branches
+    TBranch        *b_SASR2LI;   //!
+    TBranch        *b_SASR2LH;   //!
+    TBranch        *b_SASR2LC2j;   //!
+    TBranch        *b_SASR2LC3j;   //!
+    TBranch        *b_SACRVVI;   //!
+    TBranch        *b_SACRVVC;   //!
+    TBranch        *b_eventweight;   //!
+
+/*
     // Declaration of leaf types
     Float_t         lept1Pt; //!
     Float_t         lept2Pt; //!
@@ -362,6 +389,11 @@ public:
     TBranch        *b_syst_MUON_TTVA_SYS_up;   //!
     TBranch        *b_syst_jvtSF_up;   //!
     TBranch        *b_syst_jvtSF_down;   //!
+*/
+    // Histograms
+    TH1F *h_SR2L0J_DirSlep; //!
+    TH1F *h_SR2L0J; //!
+    TH1F *h_SR2L2J_Conv_High_Med_Low; //!
 
     // this is a standard constructor
     ytEventSelection ();
@@ -376,6 +408,9 @@ public:
     virtual EL::StatusCode postExecute ();
     virtual EL::StatusCode finalize ();
     virtual EL::StatusCode histFinalize ();
+
+    void set_isOptimization(bool b) { isOptimization = b; }
+    void set_analysis_type(string s) { analysis_type = s; }
 
     // this is needed to distribute the algorithm to the workers
     ClassDef(ytEventSelection, 1);

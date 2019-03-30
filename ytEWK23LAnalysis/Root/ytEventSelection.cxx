@@ -16,6 +16,15 @@ ytEventSelection :: ytEventSelection ()
     // called on both the submission and the worker node.  Most of your
     // initialization code will go into histInitialize() and
     // initialize().
+
+    m_region = new yt_regions;
+
+    weighted_event_counts[0] = 0;
+    weighted_event_counts[1] = 0;
+    weighted_event_counts[2] = 0;
+    weighted_event_counts[3] = 0;
+    weighted_event_counts[4] = 0;
+    weighted_event_counts[5] = 0;
 }
 
 
@@ -40,6 +49,19 @@ EL::StatusCode ytEventSelection :: histInitialize ()
     // beginning on each worker node, e.g. create histograms and output
     // trees.  This method gets called before any input files are
     // connected.
+
+    h_SR2L0J_DirSlep = new TH1F("h_SR2L0J_DirSlep", "SR2L0J_DirSlep:Bin:Events", 15, 0, 15);
+    h_SR2L0J = new TH1F("h_SR2L0J", "SR2L0J:Bin:Events", 4, 0, 4);
+    h_SR2L2J_Conv_High_Med_Low = new TH1F("h_SR2L2J_Conv_Med_High", "SR2L2J_Conv_High_Med_Low:Bin:Events", 4, 0, 4);
+
+    h_SR2L0J_DirSlep->Sumw2();
+    h_SR2L0J->Sumw2();
+    h_SR2L2J_Conv_High_Med_Low->Sumw2();
+
+    wk()->addOutput(h_SR2L0J_DirSlep);
+    wk()->addOutput(h_SR2L0J);
+    wk()->addOutput(h_SR2L2J_Conv_High_Med_Low);
+
     return EL::StatusCode::SUCCESS;
 }
 
@@ -64,6 +86,17 @@ EL::StatusCode ytEventSelection :: changeInput (bool firstFile)
     fChain = wk()->tree();
     fChain->SetMakeClass(1);
 
+    // Sarah's ntuple
+    // /afs/cern.ch/work/w/williams/public/MultiLepInputMoriond2017/2L2JInputs/CentralBackgrounds.root
+    fChain->SetBranchAddress("SASR2LI", &SASR2LI, &b_SASR2LI);
+    fChain->SetBranchAddress("SASR2LH", &SASR2LH, &b_SASR2LH);
+    fChain->SetBranchAddress("SASR2LC2j", &SASR2LC2j, &b_SASR2LC2j);
+    fChain->SetBranchAddress("SASR2LC3j", &SASR2LC3j, &b_SASR2LC3j);
+    fChain->SetBranchAddress("SACRVVI", &SACRVVI, &b_SACRVVI);
+    fChain->SetBranchAddress("SACRVVC", &SACRVVC, &b_SACRVVC);
+    fChain->SetBranchAddress("eventweight", &eventweight, &b_eventweight);
+
+    // Nicky's ntuple
     fChain->SetBranchAddress("lept1Pt", &lept1Pt, &b_lept1Pt);
     fChain->SetBranchAddress("lept2Pt", &lept2Pt, &b_lept2Pt);
     fChain->SetBranchAddress("lept3Pt", &lept3Pt, &b_lept3Pt);
@@ -254,6 +287,162 @@ EL::StatusCode ytEventSelection :: execute ()
 
     wk()->tree()->GetEntry(wk()->treeEntry());
 
+    // 2L or 3L analysis?
+    bool is2L = false, is3L = false;
+    if (analysis_type.find("2L") != string::npos)
+        is2L = true;
+    if (analysis_type.find("3L") != string::npos)
+        is3L = true;
+
+    if (is2L) {
+        cout << "analysis_type=" << analysis_type << " is a 2L analysis." << endl;
+
+        // Using Sarah's ntuple
+        // count the weighted events
+        weighted_event_counts[0] += SASR2LI * eventweight;
+        weighted_event_counts[1] += SASR2LH * eventweight;
+        weighted_event_counts[2] += SASR2LC2j * eventweight;
+        weighted_event_counts[3] += SASR2LC3j * eventweight;
+        weighted_event_counts[4] += SACRVVI * eventweight;
+        weighted_event_counts[5] += SACRVVC * eventweight;
+
+        // Using Nicky's ntuple
+        bool cut_two_leptons = m_region->pass_baseTwoLepCuts(lept1Pt, lept2Pt, L2isEMU, L2isEE, L2isMUMU, L2Mll, lept1q, lept2q);
+        bool cut_same_falvor = m_region->pass_sameFlavorLep(L2isEMU, L2isEE, L2isMUMU);
+        bool cut_Z_veto = m_region->pass_ZVeto(L2Mll);
+        bool cut_jet_veto = m_region->pass_JetVeto(L2nCentralBJets, L2nCentralLightJets60);
+        bool cut_bjet_veto = m_region->pass_bjet_veto(L2nCentralBJets);
+        bool cut_at_least_two_jets30 = m_region->pass_at_least_two_jets30(L2nCentralLightJets30);
+
+        if (analysis_type == "2L0J_DirSlep") {
+            // same-flavor leptons events are required
+            // same flavour events are required to have Z veto
+            if (cut_two_leptons && cut_jet_veto &&
+                cut_same_falvor && cut_Z_veto) {
+                bool cut_2L_SR_bin1 = m_region->pass_SR2Lbin1(L2MT2, L2Mll);
+                bool cut_2L_SR_bin2 = m_region->pass_SR2Lbin2(L2MT2, L2Mll);
+                bool cut_2L_SR_bin3 = m_region->pass_SR2Lbin3(L2MT2, L2Mll);
+                bool cut_2L_SR_bin4 = m_region->pass_SR2Lbin4(L2MT2, L2Mll);
+                bool cut_2L_SR_bin5 = m_region->pass_SR2Lbin5(L2MT2, L2Mll);
+                bool cut_2L_SR_bin6 = m_region->pass_SR2Lbin6(L2MT2, L2Mll);
+                bool cut_2L_SR_bin7 = m_region->pass_SR2Lbin7(L2MT2, L2Mll);
+                bool cut_2L_SR_bin8 = m_region->pass_SR2Lbin8(L2MT2, L2Mll);
+                bool cut_2L_SR_bin9 = m_region->pass_SR2Lbin9(L2MT2, L2Mll);
+                bool cut_2L_SR_bin10 = m_region->pass_SR2Lbin10(L2MT2, L2Mll);
+                bool cut_2L_SR_bin11 = m_region->pass_SR2Lbin11(L2MT2, L2Mll);
+                bool cut_2L_SR_bin12 = m_region->pass_SR2Lbin12(L2MT2, L2Mll);
+                bool cut_2L_SR_bin13 = m_region->pass_SR2Lbin13(L2MT2, L2Mll);
+
+                if (cut_2L_SR_bin1) h_SR2L0J_DirSlep->AddBinContent(1);
+                if (cut_2L_SR_bin2) h_SR2L0J_DirSlep->AddBinContent(2);
+                if (cut_2L_SR_bin3) h_SR2L0J_DirSlep->AddBinContent(3);
+                if (cut_2L_SR_bin4) h_SR2L0J_DirSlep->AddBinContent(4);
+                if (cut_2L_SR_bin5) h_SR2L0J_DirSlep->AddBinContent(5);
+                if (cut_2L_SR_bin6) h_SR2L0J_DirSlep->AddBinContent(6);
+                if (cut_2L_SR_bin7) h_SR2L0J_DirSlep->AddBinContent(7);
+                if (cut_2L_SR_bin8) h_SR2L0J_DirSlep->AddBinContent(8);
+                if (cut_2L_SR_bin9) h_SR2L0J_DirSlep->AddBinContent(9);
+                if (cut_2L_SR_bin10) h_SR2L0J_DirSlep->AddBinContent(10);
+                if (cut_2L_SR_bin11) h_SR2L0J_DirSlep->AddBinContent(11);
+                if (cut_2L_SR_bin12) h_SR2L0J_DirSlep->AddBinContent(12);
+                if (cut_2L_SR_bin13) h_SR2L0J_DirSlep->AddBinContent(13);
+
+                bool cut_2L_SR_loose = m_region->pass_SR2LLoose(L2MT2, L2Mll);
+                bool cut_2L_SR_tight = m_region->pass_SR2LTight(L2MT2, L2Mll);
+
+                if (cut_2L_SR_loose) h_SR2L0J_DirSlep->AddBinContent(14);
+                if (cut_2L_SR_tight) h_SR2L0J_DirSlep->AddBinContent(15);
+            }
+        }
+        else if (analysis_type == "2L0J") {
+            // different-flavorleptons
+            if (cut_two_leptons && cut_jet_veto && (!cut_same_falvor)) {
+                bool cut_2L_SR_binA = m_region->pass_SR2LbinA(L2MT2, L2Mll);
+                bool cut_2L_SR_binB = m_region->pass_SR2LbinB(L2MT2, L2Mll);
+                bool cut_2L_SR_binC = m_region->pass_SR2LbinC(L2MT2, L2Mll);
+                bool cut_2L_SR_binD = m_region->pass_SR2LbinD(L2MT2, L2Mll);
+
+                if (cut_2L_SR_binA) h_SR2L0J->AddBinContent(1);
+                if (cut_2L_SR_binB) h_SR2L0J->AddBinContent(2);
+                if (cut_2L_SR_binC) h_SR2L0J->AddBinContent(3);
+                if (cut_2L_SR_binD) h_SR2L0J->AddBinContent(4);
+            }
+        }
+        else if (analysis_type == "2L2J_Conv_High" || analysis_type == "2L2J_Conv_Med") {
+            // The only difference between the medium and high mass regions is the final MET requirement.
+            bool cut_mll_high = m_region->pass_mll("high", L2Mll);
+            bool cut_Z_pT = m_region->pass_Z_pT("high", L2ZPT);
+            bool cut_W_pT = m_region->pass_W_pT(L2WPT);
+            bool cut_mT2 = m_region->pass_MT2(L2MT2);
+            bool cut_dR_JJ = m_region->pass_deltaR_jj("high", L2dRJJ);
+            bool cut_dR_LL = m_region->pass_deltaR_ll(L2dRLL);
+            bool cut_dPhi_MET_W = m_region->pass_deltaPhi_MET_W("high", L2dPhimetW);
+            bool cut_mjj = m_region->pass_mjj("high", L2mJJ);
+
+            if (cut_two_leptons && cut_bjet_veto && cut_at_least_two_jets30 &&
+                cut_mll_high &&
+                cut_Z_pT && cut_W_pT &&
+                cut_mT2 &&
+                cut_dR_JJ && cut_dR_LL &&
+                cut_dPhi_MET_W &&
+                cut_mjj) {
+                if (analysis_type == "2L2J_Conv_High") {
+                    bool cut_met = m_region->pass_MET("high", MET);
+                    if (cut_met) h_SR2L2J_Conv_High_Med_Low->AddBinContent(1); // High
+                }
+                else if (analysis_type == "2L2J_Conv_Med") {
+                    bool cut_met = m_region->pass_MET("medium", MET);
+                    if (cut_met) h_SR2L2J_Conv_High_Med_Low->AddBinContent(2); // Medium
+                }
+            }
+        }
+        else if (analysis_type == "2L2J_Conv_Low") {
+            bool cut_mjj = m_region->pass_mjj("low", L2mJJ);
+            bool cut_met = m_region->pass_MET("low", MET);
+            if (cut_two_leptons && cut_bjet_veto && cut_at_least_two_jets30 &&
+                cut_mjj && cut_met) {
+                if (low_2jets) {
+                    bool cut_mll = m_region->pass_mll("low_2jets", L2Mll);
+                    bool cut_Z_pT = m_region->pass_Z_pT("low_2jets", L2ZPT);
+                    bool cut_dPhi_MET_Z = m_region->pass_deltaPhi_MET_Z(L2dPhimetZ);
+                    bool cut_dPhi_MET_W = m_region->pass_deltaPhi_MET_W("low_2jets", L2dPhimetW);
+                    bool cut_MET_over_Z_pT = m_region->pass_MET_over_Z_pT(MET_over_Z_pT);
+                    bool cut_MET_over_W_pT = m_region->pass_MET_over_W_pT(MET_over_W_pT);
+
+                    if (cut_mll &&
+                        cut_Z_pT &&
+                        cut_dPhi_MET_Z && cut_dPhi_MET_W &&
+                        cut_MET_over_Z_pT && cut_MET_over_W_pT) {
+                        h_SR2L2J_Conv_High_Med_Low->AddBinContent(3); // Low 2 jets
+                    }
+                }
+                else if (low_3-5jets) {
+                    bool cut_mll = m_region->pass_mll("low_3-5jets", L2Mll);
+                    bool cut_third_jet_pT = m_region->pass_thrid_jet_pT(3rdJetPT);
+                    bool cut_Z_pt = m_region->pass_Z_pT("low_3-5jets", L2ZPT);
+                    bool cut_Z_eta = m_region->pass_Z_eta(L2ZETA);
+                    bool cut_dPhi_MET_ISR = m_region->pass_deltaPhi_MET_ISR(L2dPhimetISR);
+                    bool cut_dPhi_MET_J0 = m_region->pass_deltaPhi_MET_J0(L2dPhimetJ0);
+                    bool cut_dPhi_MET_W = m_region->pass_deltaPhi_MET_W("low_3-5jets", L2dPhimetW);
+                    bool cut_MET_over_ISR = m_region->pass_MET_over_ISR(MET_OVER_ISR);
+                    bool cut_dR_JJ = m_region->pass_deltaR_jj("low", L2dRJJ);
+
+                    if (cut_mll &&
+                        cut_third_jet_pT &&
+                        cut_Z_pt && cut_Z_eta &&
+                        cut_dPhi_MET_ISR && cut_dPhi_MET_J0 && cut_dPhi_MET_W &&
+                        cut_MET_over_ISR &&
+                        cut_dR_JJ) {
+                        h_SR2L2J_Conv_High_Med_Low->AddBinContent(4); // Low 3-5 jets
+                    }
+                }
+            }
+        }
+    }
+    if (is3L) {
+        cout << "analysis_type=" << analysis_type << " is a 3L analysis." << endl;
+    }
+
     return EL::StatusCode::SUCCESS;
 }
 
@@ -280,6 +469,17 @@ EL::StatusCode ytEventSelection :: finalize ()
     // submission node after all your histogram outputs have been
     // merged.  This is different from histFinalize() in that it only
     // gets called on worker nodes that processed input events.
+
+    cout << "Weighted event counts:" << endl;
+    cout << "SASR2LI weighted_event_counts=" << weighted_event_counts[0] << endl;
+    cout << "SASR2LH weighted_event_counts=" << weighted_event_counts[1] << endl;
+    cout << "SASR2LC2j weighted_event_counts=" << weighted_event_counts[2] << endl;
+    cout << "SASR2LC3j weighted_event_counts=" << weighted_event_counts[3] << endl;
+    cout << "SACRVVI weighted_event_counts=" << weighted_event_counts[4] << endl;
+    cout << "SACRVVC weighted_event_counts=" << weighted_event_counts[5] << endl;
+
+    delete m_region;
+
     return EL::StatusCode::SUCCESS;
 }
 
